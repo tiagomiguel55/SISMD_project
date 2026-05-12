@@ -282,7 +282,7 @@ Para complementar a análise dos tempos de execução, foram recolhidas métrica
 
 O gráfico de CPU mostra um uso médio de 48,4%, com oscilações entre 30% e 70% ao longo do benchmark. Esta variação reflete o comportamento das diferentes implementações, ou seja, as paralelas puxam mais CPU do que o sequencial, e as diferenças entre elas são visíveis nos picos. A atividade de GC ficou nos 4,7%, o que confirma que o Parallel GC não interfere significativamente com o processamento.
 
-O gráfico de heap mostra um padrão típico de dente de serra: o heap cresce durante o processamento de cada implementação e desce abruptamente quando o GC faz uma coleta entre runs. O heap size estabilizou nos 4 GB configurados e o used heap oscilou entre 1,5 GB e 2,5 GB, o que mostra que o programa usa intensivamente a memória disponível mas sem a esgotar.
+O gráfico de heap cresce durante o processamento de cada implementação e desce abruptamente quando o GC faz uma coleta entre runs. O heap size estabilizou nos 4 GB configurados e o used heap oscilou entre 1,5 GB e 2,5 GB, o que mostra que o programa usa intensivamente a memória disponível mas sem a esgotar.
 
 ### O que os resultados dizem
 
