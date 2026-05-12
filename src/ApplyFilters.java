@@ -105,35 +105,40 @@ public class ApplyFilters {
     // -------------------------------------------------------------------------
 
     static void writeOutputs(String fp, int n) throws Exception {
+        java.io.File outDir = new java.io.File("docs/processed_images");
+        if (!outDir.exists()) {
+            outDir.mkdirs();
+        }
+
         // Sequential
-        new Filters(fp).HistogramFilter("out_sequential.jpg");
-        System.out.println("  [OK] out_sequential.jpg");
+        new Filters(fp).HistogramFilter("docs/processed_images/out_sequential.jpg");
+        System.out.println("  [OK] docs/processed_images/out_sequential.jpg");
         System.gc(); Thread.sleep(200);
 
         // Multithreaded
-        new MultithreadedFilter(fp, n).applyHistogramFilter("out_multithreaded.jpg");
-        System.out.println("  [OK] out_multithreaded.jpg");
+        new MultithreadedFilter(fp, n).applyHistogramFilter("docs/processed_images/out_multithreaded.jpg");
+        System.out.println("  [OK] docs/processed_images/out_multithreaded.jpg");
         System.gc(); Thread.sleep(200);
 
         // Thread Pool
         ThreadPoolFilter tp = new ThreadPoolFilter(fp, n);
-        tp.applyHistogramFilter("out_threadpool.jpg");
+        tp.applyHistogramFilter("docs/processed_images/out_threadpool.jpg");
         tp.shutdown();
-        System.out.println("  [OK] out_threadpool.jpg");
+        System.out.println("  [OK] docs/processed_images/out_threadpool.jpg");
         System.gc(); Thread.sleep(200);
 
         // Fork/Join
         ForkJoinFilter fj = new ForkJoinFilter(fp, n);
-        fj.applyHistogramFilter("out_forkjoin.jpg");
+        fj.applyHistogramFilter("docs/processed_images/out_forkjoin.jpg");
         fj.shutdown();
-        System.out.println("  [OK] out_forkjoin.jpg");
+        System.out.println("  [OK] docs/processed_images/out_forkjoin.jpg");
         System.gc(); Thread.sleep(200);
 
         // CompletableFuture
         CompletableFutureFilter cf = new CompletableFutureFilter(fp, n);
-        cf.applyHistogramFilter("out_completablefuture.jpg");
+        cf.applyHistogramFilter("docs/processed_images/out_completablefuture.jpg");
         cf.shutdown();
-        System.out.println("  [OK] out_completablefuture.jpg");
+        System.out.println("  [OK] docs/processed_images/out_completablefuture.jpg");
     }
 
     // -------------------------------------------------------------------------

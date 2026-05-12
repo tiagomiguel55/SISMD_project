@@ -48,9 +48,24 @@ public class Utils {
   private static BufferedImage loadImageFile(String filename) {
     BufferedImage img = null;
     try {
-      img = ImageIO.read(new File(filename));
+      File file = new File(filename);
+      if (!file.exists()) {
+        if (filename.startsWith("../docs/")) {
+          File fallback = new File(filename.substring(3));
+          if (fallback.exists()) {
+            file = fallback;
+          }
+        } else {
+          File fallbackImg = new File("docs/images/" + filename);
+          if (fallbackImg.exists()) {
+            file = fallbackImg;
+          }
+        }
+      }
+      img = ImageIO.read(file);
     } catch (IOException e) {
       System.out.println("Could not load image "+filename+" !");
+      System.out.println("Attempted absolute path: " + new File(filename).getAbsolutePath());
       e.printStackTrace();
       System.exit(1);
     }
