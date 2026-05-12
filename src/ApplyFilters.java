@@ -23,12 +23,6 @@ public class ApplyFilters {
         System.out.println("Image         : " + filePath);
         System.out.println();
 
-        // ---------------------------------------------------------------
-        // Benchmark — one implementation at a time, measuring only
-        // processImage() (no I/O, no pool creation overhead).
-        // Each instance goes out of scope after its method returns so the
-        // GC can reclaim its Color[][] before the next image load.
-        // ---------------------------------------------------------------
         long seqAvg = benchmarkSequential(filePath);
         long mtAvg  = benchmarkMT(filePath, numThreads);
         long tpAvg  = benchmarkTP(filePath, numThreads);
@@ -55,19 +49,12 @@ public class ApplyFilters {
                     + " | Time: "        + gc.getCollectionTime() + " ms");
         }
 
-        // ---------------------------------------------------------------
-        // Write output images — done AFTER benchmark to avoid any
-        // interference with timing measurements.
-        // Each implementation is instantiated fresh here.
-        // ---------------------------------------------------------------
+
         System.out.println("\nGenerating output images...");
         writeOutputs(filePath, numThreads);
         System.out.println("Done. Check out_*.jpg files.");
     }
 
-    // -------------------------------------------------------------------------
-    // Benchmark methods
-    // -------------------------------------------------------------------------
 
     static long benchmarkSequential(String fp) throws Exception {
         Filters impl = new Filters(fp);
@@ -100,9 +87,7 @@ public class ApplyFilters {
         return result;
     }
 
-    // -------------------------------------------------------------------------
-    // Write one output image per implementation — called after benchmark
-    // -------------------------------------------------------------------------
+
 
     static void writeOutputs(String fp, int n) throws Exception {
         java.io.File outDir = new java.io.File("docs/processed_images");
@@ -141,9 +126,6 @@ public class ApplyFilters {
         System.out.println("  [OK] docs/processed_images/out_completablefuture.jpg");
     }
 
-    // -------------------------------------------------------------------------
-    // Generic benchmark runner
-    // -------------------------------------------------------------------------
 
     static long runBenchmark(String name, BenchmarkTask task) throws Exception {
         System.out.println("[" + name + "]");

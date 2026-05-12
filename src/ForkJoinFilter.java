@@ -3,17 +3,7 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- * Histogram Equalization - Fork/Join Implementation
- *
- * Synchronization strategy — Stage 1: AtomicInteger[] (once per bucket per leaf)
- *   Each RecursiveAction leaf accumulates counts into a local int[256]
- *   during processing — no atomic ops during pixel iteration.
- *   At the end of its stripe, the leaf merges into the shared AtomicInteger[]
- *   using addAndGet() — one atomic operation per bucket (256 total per leaf).
- *   This gives fine-grained concurrency: different leaves only contend when
- *   updating the same bucket, and even then only for 256 operations total.
- */
+
 public class ForkJoinFilter {
 
     private static final int THRESHOLD = 100;

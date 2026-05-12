@@ -2,21 +2,7 @@ import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Histogram Equalization - Multithreaded Implementation (Manual Threads)
- *
- * Threads are created and managed manually — no thread pool.
- * The image is divided into N vertical stripes (by column), one per thread.
- *
- * Synchronization strategy — Stage 1: synchronized (once per stripe)
- *   Each thread accumulates its counts into a local int[256] histogram
- *   during the parallel phase — no lock needed during pixel processing.
- *   At the end of its stripe, the thread acquires the synchronized lock
- *   ONCE to merge its local histogram into the shared one (256 additions).
- *   This reduces lock acquisitions from millions (one per pixel) to N
- *   (one per thread), drastically reducing contention while still
- *   demonstrating the synchronized mechanism.
- */
+
 public class MultithreadedFilter {
 
     private final Color[][] image;

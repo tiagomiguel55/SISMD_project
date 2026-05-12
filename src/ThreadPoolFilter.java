@@ -6,17 +6,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.locks.ReentrantLock;
 
-/**
- * Histogram Equalization - Thread Pool Implementation
- *
- * Synchronization strategy — Stage 1: ReentrantLock (once per stripe)
- * Each Runnable accumulates counts into a local int[256] histogram
- * during the parallel phase — no lock needed during pixel processing.
- * At the end of its stripe, the Runnable acquires the ReentrantLock
- * ONCE to merge its local histogram into the shared one (256 additions).
- * ReentrantLock offers more flexibility than synchronized: supports
- * timed waits, interruptible acquisition, and lock polling.
- */
 public class ThreadPoolFilter {
 
     private final Color[][] image;

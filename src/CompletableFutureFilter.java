@@ -6,18 +6,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/**
- * Histogram Equalization - CompletableFuture Implementation
- *
- * Pipeline: supplyAsync -> thenApply -> thenApply -> thenAccept
- *
- * Synchronization strategy — Stage 1: AtomicInteger[] (once per stripe)
- *   Each runAsync task accumulates counts into a local int[256] during
- *   pixel processing — no atomic ops during iteration.
- *   At the end of its stripe, the task merges into the shared AtomicInteger[]
- *   using addAndGet() — one atomic operation per bucket (256 total per task).
- *   Same strategy as Fork/Join for a fair comparison of the two pipelines.
- */
+
 public class CompletableFutureFilter {
 
     private final Color[][] image;
