@@ -308,7 +308,7 @@ O Thread Pool foi a opção mais equilibrada para imagens pequenas, resolvendo l
 
 O Multithread (sem Thread Pool) fez o trabalho de forma satisfatória, mas mostrou-se mais instável. É muito sensível ao número de threads lançadas e, como se viu na imagem pequena, criar threads a mais pode piorar o resultado em vez de o melhorar.
 
-O CompletableFuture teve o comportamento mais curioso. Com apenas 2 threads, o peso de gerir todo o pipeline assíncrono colocou-o no último lugar em todas as imagens. Quando lhe foram dadas threads suficientes (8 a 12), o cenário inverteu-se completamente e tornou-se extremamente competitivo, chegando mesmo a liderar na imagem média. É uma implementação que precisa de espaço para respirar.
+O CompletableFuture teve o comportamento mais curioso. Com apenas 2 threads, o peso de gerir todo o pipeline assíncrono colocou-o no último lugar em todas as imagens. Quando lhe foram dadas threads suficientes (8 a 12), o cenário inverteu-se completamente e tornou-se extremamente competitivo, chegando mesmo a liderar na imagem média. 
 
 #### 5.3. O que o hardware nos ensinou
 
