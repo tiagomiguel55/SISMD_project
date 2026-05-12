@@ -103,7 +103,7 @@ O ponto fraco desta abordagem é que as threads são criadas de novo em cada cha
 
 ### 3.3. Solução com Thread Pool
 
-Para resolver o problema anterior, introduzi um `ExecutorService` criado uma única vez no construtor e reutilizado em todas as chamadas a `processImage()`. Ou seja, nas 5 runs medidas do benchmark, o mesmo pool é usado nas 5 chamadas — as threads já estão prontas e não precisam de ser criadas de novo a cada vez. Assim o custo de criar e destruir threads é pago apenas uma vez.
+Para resolver o problema anterior, introduzi um `ExecutorService` criado uma única vez no construtor e reutilizado em todas as chamadas a `processImage()`. Ou seja, nas 5 runs medidas do benchmark, o mesmo pool é usado nas 5 chamadas, ou seja, as threads já estão prontas e não precisam de ser criadas de novo a cada vez. Assim o custo de criar e destruir threads é pago apenas uma vez.
 
 A sincronização passou a ser feita com um `ReentrantLock` em vez de `synchronized`. O `ReentrantLock` é mais flexível, suporta timeout e aquisição interrompível, e garante sempre a libertação do lock através do padrão `try/finally`.
 
