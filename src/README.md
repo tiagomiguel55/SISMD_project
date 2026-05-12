@@ -300,8 +300,6 @@ Na imagem grande (`src_large.jpg` com 17,6 MP), o tempo gasto a gerir threads to
 
 #### 5.2. Como se portou cada implementação?
 
-Olhando para o panorama geral, cada abordagem revelou a sua personalidade própria.
-
 O Fork/Join foi a implementação mais consistente. Liderou nas imagens maiores e provou que dividir o trabalho recursivamente com work-stealing é a melhor abordagem para grandes volumes de dados. O seu único ponto menos forte é nas imagens muito pequenas, onde a divisão recursiva introduz overhead desnecessário para tão poucas colunas.
 
 O Thread Pool foi a opção mais equilibrada para imagens pequenas, resolvendo logo à partida o problema do overhead de criação de threads. A reutilização do pool compensa claramente face às threads manuais.
