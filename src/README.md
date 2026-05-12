@@ -71,7 +71,7 @@ tmp[i][j]  = new Color(newLum, newLum, newLum);
     }
 ```
 
-As Fases 1 e 3 são as mais pesadas computacionalmente, pois iteram sobre todos os píxeis da imagem, O(width × height). A Fase 2 opera apenas sobre 256 valores e é negligenciável em termos de tempo. São precisamente as Fases 1 e 3 que vão ser paralelizadas nas implementações seguintes; a Fase 2 mantém-se sempre sequencial porque cada valor do histograma cumulativo depende do anterior.
+As Fases 1 e 3 são as mais pesadas computacionalmente, pois iteram sobre todos os píxeis da imagem. A Fase 2 opera apenas sobre 256 valores e é negligenciável em termos de tempo. São precisamente as Fases 1 e 3 que vão ser paralelizadas nas implementações seguintes; a Fase 2 mantém-se sempre sequencial porque cada valor do histograma cumulativo depende do anterior.
 
 ### 3.2. Solução Multithread (Sem Thread Pool)
 
@@ -83,13 +83,13 @@ Para a sincronização do histograma, cada thread acumula as suas contagens num 
 // Cada thread acumula localmente...
 int[] localHist = new int[256];
 for (int i = startX; i < endX; i++)
-    for (int j = 0; j < height; j++)
-        localHist[computeLuminosity(...)]++;
+        for (int j = 0; j < height; j++)
+localHist[computeLuminosity(...)]++;
 
 // ...e só depois faz o merge com synchronized
 synchronized (hist) {
-    for (int i = 0; i < 256; i++) hist[i] += localHist[i];
-}
+        for (int i = 0; i < 256; i++) hist[i] += localHist[i];
+        }
 ```
 
 A gestão das threads é explícita: todas são iniciadas com `thread.start()` e o programa aguarda a conclusão de cada uma com `thread.join()` antes de avançar para a fase seguinte. Isto garante que o histograma global está completo antes de calcular o cumulativo, e que todos os píxeis estão transformados antes de devolver o resultado.
@@ -103,7 +103,7 @@ O ponto fraco desta abordagem é que as threads são criadas de novo em cada cha
 
 ### 3.3. Solução com Thread Pool
 
-Para resolver o problema anterior, introduzi um `ExecutorService` criado uma única vez no construtor e reutilizado em todas as chamadas. Assim o custo de criar e destruir threads é pago apenas uma vez.
+Para resolver o problema anterior, introduzi um `ExecutorService` criado uma única vez no construtor e reutilizado em todas as chamadas a `processImage()`. Ou seja, nas 5 runs medidas do benchmark, o mesmo pool é usado nas 5 chamadas — as threads já estão prontas e não precisam de ser criadas de novo a cada vez. Assim o custo de criar e destruir threads é pago apenas uma vez.
 
 A sincronização passou a ser feita com um `ReentrantLock` em vez de `synchronized`. O `ReentrantLock` é mais flexível, suporta timeout e aquisição interrompível, e garante sempre a libertação do lock através do padrão `try/finally`.
 
@@ -121,6 +121,8 @@ O tamanho do pool é igual ao número de threads passado como argumento, usando 
 ### 3.4. Solução com Fork/Join
 
 O Fork/Join divide o trabalho recursivamente. Enquanto a faixa de colunas for maior que 100, divide-se em duas metades e processa-as em paralelo. Quando chega a uma faixa pequena o suficiente, calcula diretamente.
+
+A escolha do threshold de 100 colunas resulta de equilibrar dois fatores opostos: um valor demasiado baixo cria centenas de subtarefas minúsculas onde o overhead de cada `fork()` domina o tempo de processamento real; um valor demasiado alto cria poucas subtarefas, deixando núcleos inativos e reduzindo a eficácia do work-stealing. Com as imagens testadas, um threshold de 100 gera subtarefas em número suficiente para manter os 8 núcleos ocupados sem que o overhead de divisão se torne significativo.
 
 Para a sincronização usei um array de `AtomicInteger`. Quando chega a uma faixa pequena o suficiente para processar diretamente, acumula localmente e no final faz o merge com addAndGet(), uma operação atómica que não precisa de locks explícitos e só contende quando duas tarefas tentam atualizar o mesmo bucket ao mesmo tempo.
 
@@ -145,11 +147,11 @@ O CompletableFuture organiza as três fases como um pipeline assíncrono encadea
 
 ```java
 CompletableFuture
-        .supplyAsync(() -> computeHistogramParallel(tmp, width, height), pool)
-        .thenApply(hist -> computeCumulativeHistogram(hist))
-        .thenApply(cum  -> transformPixelsParallel(tmp, width, height, cum, totalPixels))
-        .thenAccept(result -> { })
-        .join();
+    .supplyAsync(() -> computeHistogramParallel(tmp, width, height), pool)
+    .thenApply(hist -> computeCumulativeHistogram(hist))
+    .thenApply(cum  -> transformPixelsParallel(tmp, width, height, cum, totalPixels))
+    .thenAccept(result -> { })
+    .join();
 ```
 
 O `.join()` no final bloqueia a thread principal até todo o pipeline estar concluído, garantindo que o resultado está disponível antes de devolver a imagem. O encadeamento com `thenApply` trata automaticamente da composição dos resultados: o histograma calculado na `supplyAsync` é passado diretamente ao `thenApply` seguinte que calcula o cumulativo, que por sua vez é passado à transformação de píxeis. Não há gestão manual de dependências entre fases.
@@ -282,7 +284,7 @@ Para complementar a análise dos tempos de execução, foram recolhidas métrica
 
 O gráfico de CPU mostra um uso médio de 48,4%, com oscilações entre 30% e 70% ao longo do benchmark. Esta variação reflete o comportamento das diferentes implementações, ou seja, as paralelas puxam mais CPU do que o sequencial, e as diferenças entre elas são visíveis nos picos. A atividade de GC ficou nos 4,7%, o que confirma que o Parallel GC não interfere significativamente com o processamento.
 
-O gráfico de heap mostra um padrão típico de dente de serra: o heap cresce durante o processamento de cada implementação e desce abruptamente quando o GC faz uma coleta entre runs. O heap size estabilizou nos 4 GB configurados e o used heap oscilou entre 1,5 GB e 2,5 GB, o que mostra que o programa usa intensivamente a memória disponível mas sem a esgotar.
+O gráfico de heap cresce durante o processamento de cada implementação e desce abruptamente quando o GC faz uma coleta entre runs. O heap size estabilizou nos 4 GB configurados e o used heap oscilou entre 1,5 GB e 2,5 GB, o que mostra que o programa usa intensivamente a memória disponível mas sem a esgotar.
 
 ### O que os resultados dizem
 
@@ -326,7 +328,7 @@ O overhead de gestão de threads não é uniforme entre implementações e os re
 
 O custo mais óbvio é o de criar threads de raiz. No Multithread sem Thread Pool, em cada chamada a `processImage()` são criadas N threads novas, cada uma com alocação de stack e registo na JVM. Na imagem pequena, onde o sequencial leva apenas 26 ms, este custo chegou a dominar completamente o tempo de execução: ao passar de 8 para 12 threads, o speedup caiu de 2,60× para 2,36×, ou seja, adicionar mais threads piorou o resultado. O Thread Pool resolve exactamente isto. Como o `ExecutorService` é criado uma vez no construtor e reutilizado em todas as chamadas, o custo de criação de threads é pago apenas na inicialização, o que explica o seu melhor desempenho nas imagens pequenas mesmo usando exactamente a mesma lógica de divisão e sincronização.
 
-A sincronização tem um impacto semelhante. A decisão de acumular localmente e sincronizar apenas no merge final reduziu o número de aquisições de lock de O(píxeis) para O(threads), o que na imagem grande com 8 threads representa passar de cerca de 17,6 milhões de tentativas de lock para apenas 8. A diferença entre `synchronized`, `ReentrantLock` e `AtomicInteger[]` é residual a este nível, o que determina a performance é a frequência de sincronização, não o mecanismo escolhido.
+A sincronização tem um impacto semelhante. A decisão de acumular localmente e sincronizar apenas no merge final reduziu o número de aquisições de lock de uma por píxel para uma por thread, o que na imagem grande com 8 threads representa passar de cerca de 17,6 milhões de tentativas de lock para apenas 8. A diferença entre `synchronized`, `ReentrantLock` e `AtomicInteger[]` é residual a este nível, o que determina a performance é a frequência de sincronização, não o mecanismo escolhido.
 
 O Fork/Join tem o seu próprio overhead: cada `fork()` implica submeter uma tarefa à fila do pool e potencialmente desencadear work-stealing. Nas imagens pequenas, com poucas colunas disponíveis para dividir, este custo é proporcionalmente alto. Nas imagens grandes, onde há sempre muitas subtarefas em fila, o work-stealing mantém todos os núcleos ocupados e o overhead relativo torna-se negligenciável, daí o Fork/Join ser o único a ultrapassar os 3,00× de speedup.
 
