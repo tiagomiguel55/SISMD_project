@@ -1,4 +1,4 @@
-# Relatório de Projeto: Histogram Equalization and Parallel Processing in Java
+# Relatório do Projeto: Histogram Equalization and Parallel Processing in Java
 
 Sistemas Multinúcleo e Distribuídos - Mestrado em Engenharia Informática, ISEP
 
