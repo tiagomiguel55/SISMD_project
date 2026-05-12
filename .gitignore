@@ -29,5 +29,5 @@ bin/
 ### Mac OS ###
 .DS_Store
 
-.zip
-.py
+src.zip
+sds.py
