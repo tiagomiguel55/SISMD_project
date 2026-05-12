@@ -296,7 +296,7 @@ Na imagem mais pequena (`src.jpg` com 1,1 MP), a execução sequencial já é t�
 
 Na imagem média (`src_medium.jpg` com 4,4 MP) o cenário já é mais equilibrado. Com 8 threads, quase todas as implementações convergem para valores muito próximos, entre 2,66× e 2,84×. É aqui que o CompletableFuture surpreende positivamente: com threads suficientes para o pipeline funcionar sem bloqueios, passa a ser o melhor resultado da tabela (2,84×).
 
-Na imagem grande (`src_large.jpg` com 17,6 MP), o tempo gasto a gerir threads dilui-se na enorme quantidade de píxeis a processar. É aqui que o Fork/Join brilha de forma isolada, alcançando 3,00× com 8 threads, o único a ultrapassar essa barreira. Como a imagem é grande, há sempre muitas subtarefas disponíveis para o work-stealing funcionar, garantindo que nenhum núcleo fica parado.
+Na imagem grande (`src_large.jpg` com 17,6 MP), o tempo gasto a gerir threads torna-se negligenciável na enorme quantidade de píxeis a processar. É aqui que o Fork/Join brilha de forma isolada, alcançando 3,00× com 8 threads, o único a ultrapassar essa barreira. Como a imagem é grande, há sempre muitas subtarefas disponíveis para o work-stealing funcionar, garantindo que nenhum núcleo fica parado.
 
 #### 5.2. Como se portou cada implementação?
 
