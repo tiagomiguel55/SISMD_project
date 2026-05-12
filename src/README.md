@@ -49,25 +49,25 @@ As três fases do algoritmo executam uma a seguir à outra, cada uma dependendo 
 // Fase 1: histograma de luminosidade
 int[] hist = new int[256];
 for (int i = 0; i < width; i++)
-        for (int j = 0; j < height; j++) {
-Color px = tmp[i][j];
-hist[computeLuminosity(px.getRed(), px.getGreen(), px.getBlue())]++;
-        }
+    for (int j = 0; j < height; j++) {
+        Color px = tmp[i][j];
+        hist[computeLuminosity(px.getRed(), px.getGreen(), px.getBlue())]++;
+    }
 
 // Fase 2: histograma cumulativo
 int[] cumulative = new int[256];
 cumulative[0] = hist[0];
-        for (int i = 1; i < 256; i++)
-cumulative[i] = cumulative[i - 1] + hist[i];
+for (int i = 1; i < 256; i++)
+    cumulative[i] = cumulative[i - 1] + hist[i];
 
 // Fase 3: transformação de cada píxel
-        for (int i = 0; i < width; i++)
-        for (int j = 0; j < height; j++) {
-Color px   = tmp[i][j];
-int lum    = computeLuminosity(px.getRed(), px.getGreen(), px.getBlue());
-double cdf = (double) cumulative[lum] / (double) (totalPixels - cdfMin);
-int newLum = Math.min(255, (int) Math.round(255.0 * cdf));
-tmp[i][j]  = new Color(newLum, newLum, newLum);
+for (int i = 0; i < width; i++)
+    for (int j = 0; j < height; j++) {
+        Color px   = tmp[i][j];
+        int lum    = computeLuminosity(px.getRed(), px.getGreen(), px.getBlue());
+        double cdf = (double) cumulative[lum] / (double) (totalPixels - cdfMin);
+        int newLum = Math.min(255, (int) Math.round(255.0 * cdf));
+        tmp[i][j]  = new Color(newLum, newLum, newLum);
     }
 ```
 
@@ -83,13 +83,13 @@ Para a sincronização do histograma, cada thread acumula as suas contagens num 
 // Cada thread acumula localmente...
 int[] localHist = new int[256];
 for (int i = startX; i < endX; i++)
-        for (int j = 0; j < height; j++)
-localHist[computeLuminosity(...)]++;
+    for (int j = 0; j < height; j++)
+        localHist[computeLuminosity(...)]++;
 
 // ...e só depois faz o merge com synchronized
 synchronized (hist) {
-        for (int i = 0; i < 256; i++) hist[i] += localHist[i];
-        }
+    for (int i = 0; i < 256; i++) hist[i] += localHist[i];
+}
 ```
 
 A gestão das threads é explícita: todas são iniciadas com `thread.start()` e o programa aguarda a conclusão de cada uma com `thread.join()` antes de avançar para a fase seguinte. Isto garante que o histograma global está completo antes de calcular o cumulativo, e que todos os píxeis estão transformados antes de devolver o resultado.
@@ -116,13 +116,13 @@ try {
 }
 ```
 
-O tamanho do pool é igual ao número de threads passado como argumento, usando `Executors.newFixedThreadPool(numThreads)`. Com base nos resultados do benchmark, o valor ótimo para este hardware é 8 threads, coincidente com o número de núcleos lógicos do Ryzen 5 4600H. Aumentar além desse ponto não traz ganhos porque o bottleneck passa a ser o acesso à memória e não a disponibilidade de CPU.
+O tamanho do pool é igual ao número de threads passado como argumento, usando `Executors.newFixedThreadPool(numThreads)`. Com base nos resultados do benchmark, o valor ótimo varia consoante o tamanho da imagem: nas imagens pequenas 8 threads dá o melhor resultado (2,89×), enquanto nas imagens grandes 12 threads supera ligeiramente (2,80× vs 2,73×). Em qualquer caso, aumentar o número de threads além dos núcleos físicos disponíveis traz ganhos cada vez mais marginais.
 
 ### 3.4. Solução com Fork/Join
 
 O Fork/Join divide o trabalho recursivamente. Enquanto a faixa de colunas for maior que 100, divide-se em duas metades e processa-as em paralelo. Quando chega a uma faixa pequena o suficiente, calcula diretamente.
 
-A escolha do threshold de 100 colunas resulta de equilibrar dois fatores opostos: um valor demasiado baixo cria centenas de subtarefas minúsculas onde o overhead de cada `fork()` domina o tempo de processamento real; um valor demasiado alto cria poucas subtarefas, deixando núcleos inativos e reduzindo a eficácia do work-stealing. Com as imagens testadas, um threshold de 100 gera subtarefas em número suficiente para manter os 8 núcleos ocupados sem que o overhead de divisão se torne significativo.
+A escolha do threshold de 100 colunas resulta de equilibrar dois fatores opostos: um valor demasiado baixo cria centenas de subtarefas minúsculas onde o overhead de cada `fork()` domina o tempo de processamento real; um valor demasiado alto cria poucas subtarefas, deixando núcleos inativos e reduzindo a eficácia do work-stealing. Com as imagens testadas, um threshold de 100 gera subtarefas em número suficiente para manter os núcleos disponíveis ocupados sem que o overhead de divisão se torne significativo.
 
 Para a sincronização usei um array de `AtomicInteger`. Quando chega a uma faixa pequena o suficiente para processar diretamente, acumula localmente e no final faz o merge com addAndGet(), uma operação atómica que não precisa de locks explícitos e só contende quando duas tarefas tentam atualizar o mesmo bucket ao mesmo tempo.
 
@@ -306,15 +306,15 @@ O Fork/Join foi a implementação mais consistente. Liderou nas imagens maiores 
 
 O Thread Pool foi a opção mais equilibrada para imagens pequenas, resolvendo logo à partida o problema do overhead de criação de threads. A reutilização do pool compensa claramente face às threads manuais.
 
-O Multithread (sem Thread Pool) fez o trabalho de forma satisfatória, mas mostrou-se mais instável. É muito sensível ao número de threads lançadas e, como se viu na imagem pequena, criar threads a mais pode piorar o resultado em vez de o melhorar.
+O Multithread Manual fez o trabalho de forma satisfatória, mas mostrou-se mais instável. É muito sensível ao número de threads lançadas e, como se viu na imagem pequena, criar threads a mais pode piorar o resultado em vez de o melhorar.
 
 O CompletableFuture teve o comportamento mais curioso. Com apenas 2 threads, o peso de gerir todo o pipeline assíncrono colocou-o no último lugar em todas as imagens. Quando lhe foram dadas threads suficientes (8 a 12), o cenário inverteu-se completamente e tornou-se extremamente competitivo, chegando mesmo a liderar na imagem média. É uma implementação que precisa de espaço para respirar.
 
 #### 5.3. O que o hardware nos ensinou
 
-Os resultados são um reflexo direto do processador utilizado, o AMD Ryzen 5 4600H com 6 núcleos físicos e 12 lógicos. O maior salto de performance acontece sempre ao passar de 4 para 8 threads. Isto faz todo o sentido: até às 6 threads estamos a distribuir trabalho por núcleos físicos reais e independentes, e cada thread adicional traz um ganho genuíno.
+Os resultados são um reflexo direto do processador utilizado, o AMD Ryzen 5 4600H com 6 núcleos físicos e 12 lógicos. O maior salto de performance acontece sempre ao passar de 2 para 4 threads, onde o trabalho começa a ser genuinamente distribuído por núcleos físicos distintos. A partir das 4 threads os ganhos tornam-se progressivamente menores.
 
-A partir das 6 threads o processador começa a usar as threads lógicas via SMT. Como estas partilham os mesmos recursos físicos do núcleo principal, o ganho de velocidade diminui bastante. É por isso que de 8 para 12 threads os tempos ficam praticamente iguais em todas as implementações, pois o processador já estava saturado.
+A partir das 6 threads o processador começa a usar as threads lógicas via SMT. Como estas partilham os mesmos recursos físicos do núcleo principal, o ganho de velocidade diminui. É por isso que de 8 para 12 threads os ganhos são muito mais modestos na maioria das implementações, com exceção do Multithread na imagem grande onde ainda se observa uma melhoria mais visível (226ms para 210ms).
 
 #### 5.4. O limite da Lei de Amdahl
 
@@ -344,6 +344,6 @@ Este projeto mostrou que paralelizar não chega. A forma como se paraleliza e a 
 
 Das cinco abordagens, o Fork/Join foi a mais consistente nas imagens grandes graças ao work-stealing, e o Thread Pool o mais eficiente nas pequenas pela reutilização de threads. O CompletableFuture destacou-se pela legibilidade do código: o pipeline `supplyAsync` seguido de `thenApply` e `thenAccept` expressa claramente as três fases e as suas dependências, mas precisa de threads suficientes para render ao máximo.
 
-O número ideal de threads para esta aplicação foi 8, coincidente com o ponto em que o Ryzen 5 4600H começa a saturar os núcleos físicos disponíveis. Adicionar mais threads além desse ponto trouxe ganhos marginais ou até regressões, o que reforça a importância de ajustar o paralelismo ao hardware real em vez de o maximizar de forma arbitrária.
+O número ideal de threads para esta aplicação não é fixo — depende da implementação e do tamanho da imagem. Para imagens pequenas, 8 threads tende a ser o ponto ótimo; para imagens grandes, 12 threads pode trazer ainda um ganho adicional, embora já marginal. Em qualquer caso, a partir dos 6 núcleos físicos os ganhos diminuem claramente, o que reforça a importância de ajustar o paralelismo ao hardware real em vez de o maximizar de forma arbitrária.
 
 Para o garbage collector, o Parallel GC revelou-se a melhor escolha para este tipo de aplicação, onde o objetivo é processar a imagem do início ao fim o mais depressa possível e onde há muitos objetos temporários a ser criados e descartados ao longo da execução.
