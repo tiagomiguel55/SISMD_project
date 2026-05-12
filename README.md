@@ -54,7 +54,7 @@ java -XX:+UseZGC -Xms512m -Xmx8g -Xlog:gc:file=gc_zgc.log:time,uptime,level,tags
 
 ## Output
 
-Após a execução, o programa gera os seguintes ficheiros na diretoria atual:
+Após a execução, o programa gera os seguintes ficheiros na diretoria docs\processed_images:
 
 | Ficheiro | Implementação |
 |----------|--------------|
