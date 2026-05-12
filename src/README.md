@@ -8,6 +8,8 @@ Sistemas Multinúcleo e Distribuídos - Mestrado em Engenharia Informática, ISE
 
 **Turma:** M1D
 
+**GitHub repository:** https://github.com/tiagomiguel55/SISMD_project.git
+
 ---
 
 ## 1. Introdução
