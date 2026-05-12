@@ -1,7 +1,7 @@
 # Histogram Equalization and Parallel Processing in Java
 
-**Sistemas Multinúcleo e Distribuídos** — Mestrado em Engenharia Informática, ISEP  
-**Autor:** Tiago Miguel Silva — 1250554
+**Sistemas Multinúcleo e Distribuídos** - Mestrado em Engenharia Informática, ISEP  
+**Autor:** Tiago Miguel Silva - 1250554
 
 ---
 
@@ -70,15 +70,15 @@ No terminal é apresentada uma tabela com os tempos médios e speedup de cada im
 
 ## Estrutura do Projeto
 
-| Ficheiro | Descrição |
-|----------|-----------|
-| `ApplyFilters.java` | Classe principal — benchmark e geração de outputs |
-| `Filters.java` | Implementação sequencial (baseline) |
-| `MultithreadedFilter.java` | Implementação com threads manuais |
-| `ThreadPoolFilter.java` | Implementação com ExecutorService |
-| `ForkJoinFilter.java` | Implementação com Fork/Join framework |
-| `CompletableFutureFilter.java` | Implementação com CompletableFuture |
-| `Utils.java` | API de leitura, escrita e cópia de imagens |
+| Ficheiro | Descrição                                         |
+|----------|---------------------------------------------------|
+| `ApplyFilters.java` | Classe principal - benchmark e geração de outputs |
+| `Filters.java` | Implementação sequencial (baseline)               |
+| `MultithreadedFilter.java` | Implementação com threads manuais                 |
+| `ThreadPoolFilter.java` | Implementação com ExecutorService                 |
+| `ForkJoinFilter.java` | Implementação com Fork/Join framework             |
+| `CompletableFutureFilter.java` | Implementação com CompletableFuture               |
+| `Utils.java` | API de leitura, escrita e cópia de imagens        |
 
 ---
 

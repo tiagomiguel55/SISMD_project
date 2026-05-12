@@ -69,7 +69,7 @@ for (int i = 0; i < width; i++)
     }
 ```
 
-As Fases 1 e 3 são as mais pesadas computacionalmente, pois iteram sobre todos os píxeis da imagem — O(width × height). A Fase 2 opera apenas sobre 256 valores e é negligenciável em termos de tempo. São precisamente as Fases 1 e 3 que vão ser paralelizadas nas implementações seguintes; a Fase 2 mantém-se sempre sequencial porque cada valor do histograma cumulativo depende do anterior.
+As Fases 1 e 3 são as mais pesadas computacionalmente, pois iteram sobre todos os píxeis da imagem, O(width × height). A Fase 2 opera apenas sobre 256 valores e é negligenciável em termos de tempo. São precisamente as Fases 1 e 3 que vão ser paralelizadas nas implementações seguintes; a Fase 2 mantém-se sempre sequencial porque cada valor do histograma cumulativo depende do anterior.
 
 ### 3.2. Solução Multithread (Sem Thread Pool)
 
@@ -313,9 +313,9 @@ O overhead de gestão de threads não é uniforme entre implementações e os re
 
 O custo mais óbvio é o de criar threads de raiz. No Multithread sem Thread Pool, em cada chamada a `processImage()` são criadas N threads novas, cada uma com alocação de stack e registo na JVM. Na imagem pequena, onde o sequencial leva apenas 26 ms, este custo chegou a dominar completamente o tempo de execução: ao passar de 8 para 12 threads, o speedup caiu de 2,60× para 2,36×, ou seja, adicionar mais threads piorou o resultado. O Thread Pool resolve exactamente isto. Como o `ExecutorService` é criado uma vez no construtor e reutilizado em todas as chamadas, o custo de criação de threads é pago apenas na inicialização, o que explica o seu melhor desempenho nas imagens pequenas mesmo usando exactamente a mesma lógica de divisão e sincronização.
 
-A sincronização tem um impacto semelhante. A decisão de acumular localmente e sincronizar apenas no merge final reduziu o número de aquisições de lock de O(píxeis) para O(threads), o que na imagem grande com 8 threads representa passar de cerca de 17,6 milhões de tentativas de lock para apenas 8. A diferença entre `synchronized`, `ReentrantLock` e `AtomicInteger[]` é residual a este nível — o que determina a performance é a frequência de sincronização, não o mecanismo escolhido.
+A sincronização tem um impacto semelhante. A decisão de acumular localmente e sincronizar apenas no merge final reduziu o número de aquisições de lock de O(píxeis) para O(threads), o que na imagem grande com 8 threads representa passar de cerca de 17,6 milhões de tentativas de lock para apenas 8. A diferença entre `synchronized`, `ReentrantLock` e `AtomicInteger[]` é residual a este nível, o que determina a performance é a frequência de sincronização, não o mecanismo escolhido.
 
-O Fork/Join tem o seu próprio overhead: cada `fork()` implica submeter uma tarefa à fila do pool e potencialmente desencadear work-stealing. Nas imagens pequenas, com poucas colunas disponíveis para dividir, este custo é proporcionalmente alto. Nas imagens grandes, onde há sempre muitas subtarefas em fila, o work-stealing mantém todos os núcleos ocupados e o overhead relativo torna-se negligenciável — daí o Fork/Join ser o único a ultrapassar os 3,00× de speedup.
+O Fork/Join tem o seu próprio overhead: cada `fork()` implica submeter uma tarefa à fila do pool e potencialmente desencadear work-stealing. Nas imagens pequenas, com poucas colunas disponíveis para dividir, este custo é proporcionalmente alto. Nas imagens grandes, onde há sempre muitas subtarefas em fila, o work-stealing mantém todos os núcleos ocupados e o overhead relativo torna-se negligenciável, daí o Fork/Join ser o único a ultrapassar os 3,00× de speedup.
 
 O CompletableFuture é o caso mais extremo. Cada fase do pipeline é submetida como uma tarefa independente, há coordenação entre fases via callbacks, e o custo de orquestrar `supplyAsync`, `thenApply` e `thenAccept` é o maior overhead fixo de todas as implementações. Com apenas 2 threads esse peso domina completamente e o CompletableFuture fica sempre em último lugar. Com 8 threads o overhead dilui-se e a implementação torna-se tão competitiva quanto as restantes, chegando mesmo a liderar na imagem média.
 
