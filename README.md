@@ -88,4 +88,4 @@ No terminal é apresentada uma tabela com os tempos médios e speedup de cada im
 - **Runs medidos:** 5
 - **Pausa entre runs:** `System.gc()` + 50 ms
 - **O que é medido:** apenas `processImage()`, sem I/O nem criação do pool
-- **Valor reportado:** média das 5 corridas medidas
+- **Valor reportado:** média das 5 runs medidas
