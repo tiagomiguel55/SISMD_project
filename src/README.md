@@ -296,19 +296,17 @@ Na imagem mais pequena (`src.jpg` com 1,1 MP), a execução sequencial já é t�
 
 Na imagem média (`src_medium.jpg` com 4,4 MP) o cenário já é mais equilibrado. Com 8 threads, quase todas as implementações convergem para valores muito próximos, entre 2,66× e 2,84×. É aqui que o CompletableFuture surpreende positivamente: com threads suficientes para o pipeline funcionar sem bloqueios, passa a ser o melhor resultado da tabela (2,84×).
 
-Na imagem grande (`src_large.jpg` com 17,6 MP), o tempo gasto a gerir threads dilui-se na enorme quantidade de píxeis a processar. É aqui que o Fork/Join brilha de forma isolada, alcançando 3,00× com 8 threads, o único a ultrapassar essa barreira. Como a imagem é grande, há sempre muitas subtarefas disponíveis para o work-stealing funcionar, garantindo que nenhum núcleo fica parado.
+Na imagem grande (`src_large.jpg` com 17,6 MP), o tempo gasto a gerir threads torna-se negligenciável na enorme quantidade de píxeis a processar. É aqui que o Fork/Join brilha de forma isolada, alcançando 3,00× com 8 threads, o único a ultrapassar essa barreira. Como a imagem é grande, há sempre muitas subtarefas disponíveis para o work-stealing funcionar, garantindo que nenhum núcleo fica parado.
 
 #### 5.2. Como se portou cada implementação?
-
-Olhando para o panorama geral, cada abordagem revelou a sua personalidade própria.
 
 O Fork/Join foi a implementação mais consistente. Liderou nas imagens maiores e provou que dividir o trabalho recursivamente com work-stealing é a melhor abordagem para grandes volumes de dados. O seu único ponto menos forte é nas imagens muito pequenas, onde a divisão recursiva introduz overhead desnecessário para tão poucas colunas.
 
 O Thread Pool foi a opção mais equilibrada para imagens pequenas, resolvendo logo à partida o problema do overhead de criação de threads. A reutilização do pool compensa claramente face às threads manuais.
 
-O Multithread Manual fez o trabalho de forma satisfatória, mas mostrou-se mais instável. É muito sensível ao número de threads lançadas e, como se viu na imagem pequena, criar threads a mais pode piorar o resultado em vez de o melhorar.
+O Multithread (sem Thread Pool) fez o trabalho de forma satisfatória, mas mostrou-se mais instável. É muito sensível ao número de threads lançadas e, como se viu na imagem pequena, criar threads a mais pode piorar o resultado em vez de o melhorar.
 
-O CompletableFuture teve o comportamento mais curioso. Com apenas 2 threads, o peso de gerir todo o pipeline assíncrono colocou-o no último lugar em todas as imagens. Quando lhe foram dadas threads suficientes (8 a 12), o cenário inverteu-se completamente e tornou-se extremamente competitivo, chegando mesmo a liderar na imagem média. É uma implementação que precisa de espaço para respirar.
+O CompletableFuture teve o comportamento mais curioso. Com apenas 2 threads, o peso de gerir todo o pipeline assíncrono colocou-o no último lugar em todas as imagens. Quando lhe foram dadas threads suficientes (8 a 12), o cenário inverteu-se completamente e tornou-se extremamente competitivo, chegando mesmo a liderar na imagem média. 
 
 #### 5.3. O que o hardware nos ensinou
 
