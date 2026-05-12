@@ -18,13 +18,13 @@ O objetivo deste projeto é implementar este algoritmo em Java e comparar difere
 
 As imagens seguintes ilustram o efeito visual da equalização de histograma. À esquerda a imagem original com baixo contraste, à direita a imagem após processamento, com muito mais detalhe e nitidez visíveis.
 
-> *![image_comparison.png](image_comparison.png)*
+> *![image_comparison.png](images/image_comparison.png)*
 > **Figura 1:** Imagem original e imagem processada após equalização de histograma.
 
 
 A figura seguinte mostra os histogramas da imagem original e dos resultados das cinco implementações. Na imagem original, as intensidades estão claramente concentradas entre os valores 60 e 130, com um pico muito pronunciado à volta dos 80, o que confirma o baixo contraste da imagem. Após a equalização, em todas as implementações, a distribuição espalha-se por toda a escala de 0 a 255, ou seja, o resultado esperado. O facto de os cinco histogramas processados serem visualmente idênticos confirma que todas as implementações produzem o mesmo output, independentemente da estratégia de paralelismo ou do mecanismo de sincronização utilizado.
 
-> *![histogram_all_implementations.png](histogram_all_implementations.png)*
+> *![histogram_all_implementations.png](images/histogram_all_implementations.png)*
 > **Figura 2:** Histograma da imagem original e das cinco implementações após equalização.
 
 ---
@@ -257,14 +257,14 @@ Os testes foram realizados num processador AMD Ryzen 5 4600H, que tem 6 núcleos
 
 ### Gráfico de Speedup
 
-> *![benchmark_final_2.png](benchmark_final_2.png)*
+> *![benchmark_final_2.png](images/benchmark_final_2.png)*
 > **Figura 3:** Speedup por implementação e número de threads, para cada tamanho de imagem.
 
 ### Utilização de CPU e Memória
 
 Para complementar a análise dos tempos de execução, foram recolhidas métricas de CPU e heap durante o benchmark à imagem `src_large.jpg` com 8 threads, utilizando o VisualVM com o Parallel GC ativo.
 
-> *![cpu_usage_and_heap_memory.png](cpu_usage_and_heap_memory.png)*
+> *![cpu_usage_and_heap_memory.png](images/cpu_usage_and_heap_memory.png)*
 > **Figura 4:** Utilização de CPU e heap durante o benchmark (VisualVM, Parallel GC, src_large.jpg, 8 threads).
 
 O gráfico de CPU mostra um uso médio de 48,4%, com oscilações entre 30% e 70% ao longo do benchmark. Esta variação reflete o comportamento das diferentes implementações, ou seja, as paralelas puxam mais CPU do que o sequencial, e as diferenças entre elas são visíveis nos picos. A atividade de GC ficou nos 4,7%, o que confirma que o Parallel GC não interfere significativamente com o processamento.

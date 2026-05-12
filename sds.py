@@ -48,7 +48,7 @@ if __name__ == '__main__':
     fig, axes = plt.subplots(1, 2, figsize=(12, 4))
     fig.suptitle(f'Histogram Equalization — {original_path}', fontsize=13, fontweight='bold')
     plot_hist(axes[0], load_gray(original_path), 'Original Image')
-    plot_hist(axes[1], load_gray('out_sequential.jpg'), 'Processed Image (Sequential)')
+    plot_hist(axes[1], load_gray('docs/images/out_sequential.jpg'), 'Processed Image (Sequential)')
     plt.tight_layout()
     plt.savefig('histogram_comparison.png', dpi=150, bbox_inches='tight')
     print('Saved: histogram_comparison.png')
