@@ -31,7 +31,7 @@ A figura seguinte mostra os histogramas da imagem original e dos resultados das 
 
 ## 2. Objetivos
 
-O que queremos com este projeto não é apenas fazer o algoritmo funcionar, mas perceber como diferentes estratégias de paralelismo e sincronização afetam o desempenho real. Para isso explorámos cinco abordagens diferentes: uma solução sequencial como ponto de comparação, threads manuais sem thread pool com `synchronized`, um thread pool com `ReentrantLock`, Fork/Join com `AtomicInteger[]`, e um pipeline assíncrono com CompletableFuture e `AtomicInteger[]`. Além disso, analisámos o impacto de diferentes garbage collectors na performance da aplicação.
+O objetivo deste projeto não é apenas fazer o algoritmo funcionar, mas perceber como diferentes estratégias de paralelismo e sincronização afetam o desempenho real. Para isso explorei cinco abordagens diferentes: uma solução sequencial como ponto de comparação, threads manuais sem thread pool com `synchronized`, um thread pool com `ReentrantLock`, Fork/Join com `AtomicInteger[]`, e um pipeline assíncrono com CompletableFuture e `AtomicInteger[]`. Além disso, analisei o impacto de diferentes garbage collectors na performance da aplicação.
 
 ---
 
@@ -47,25 +47,25 @@ As três fases do algoritmo executam uma a seguir à outra, cada uma dependendo 
 // Fase 1: histograma de luminosidade
 int[] hist = new int[256];
 for (int i = 0; i < width; i++)
-    for (int j = 0; j < height; j++) {
-        Color px = tmp[i][j];
-        hist[computeLuminosity(px.getRed(), px.getGreen(), px.getBlue())]++;
-    }
+        for (int j = 0; j < height; j++) {
+Color px = tmp[i][j];
+hist[computeLuminosity(px.getRed(), px.getGreen(), px.getBlue())]++;
+        }
 
 // Fase 2: histograma cumulativo
 int[] cumulative = new int[256];
 cumulative[0] = hist[0];
-for (int i = 1; i < 256; i++)
-    cumulative[i] = cumulative[i - 1] + hist[i];
+        for (int i = 1; i < 256; i++)
+cumulative[i] = cumulative[i - 1] + hist[i];
 
 // Fase 3: transformação de cada píxel
-for (int i = 0; i < width; i++)
-    for (int j = 0; j < height; j++) {
-        Color px   = tmp[i][j];
-        int lum    = computeLuminosity(px.getRed(), px.getGreen(), px.getBlue());
-        double cdf = (double) cumulative[lum] / (double) (totalPixels - cdfMin);
-        int newLum = Math.min(255, (int) Math.round(255.0 * cdf));
-        tmp[i][j]  = new Color(newLum, newLum, newLum);
+        for (int i = 0; i < width; i++)
+        for (int j = 0; j < height; j++) {
+Color px   = tmp[i][j];
+int lum    = computeLuminosity(px.getRed(), px.getGreen(), px.getBlue());
+double cdf = (double) cumulative[lum] / (double) (totalPixels - cdfMin);
+int newLum = Math.min(255, (int) Math.round(255.0 * cdf));
+tmp[i][j]  = new Color(newLum, newLum, newLum);
     }
 ```
 
@@ -73,7 +73,7 @@ As Fases 1 e 3 são as mais pesadas computacionalmente, pois iteram sobre todos 
 
 ### 3.2. Solução Multithread (Sem Thread Pool)
 
-Aqui criámos e gerimos as threads manualmente. A imagem é dividida em faixas verticais de colunas e cada thread fica responsável por uma faixa.
+Aqui criei e geri as threads manualmente. A imagem é dividida em faixas verticais de colunas e cada thread fica responsável por uma faixa.
 
 Para a sincronização do histograma, cada thread acumula as suas contagens num array local durante o processamento, sem nenhum lock. Só no final, quando termina de processar toda a sua faixa, é que adquire um bloco `synchronized` para fazer o merge com o histograma global. Desta forma, o lock é adquirido apenas uma vez por thread em vez de uma vez por píxel, o que reduz drasticamente a contenção.
 
@@ -90,11 +90,18 @@ synchronized (hist) {
 }
 ```
 
+A gestão das threads é explícita: todas são iniciadas com `thread.start()` e o programa aguarda a conclusão de cada uma com `thread.join()` antes de avançar para a fase seguinte. Isto garante que o histograma global está completo antes de calcular o cumulativo, e que todos os píxeis estão transformados antes de devolver o resultado.
+
+```java
+for (Thread thread : threads) thread.start();
+for (Thread thread : threads) thread.join();
+```
+
 O ponto fraco desta abordagem é que as threads são criadas de novo em cada chamada a `processImage()`, o que introduz overhead extra especialmente visível em imagens pequenas.
 
 ### 3.3. Solução com Thread Pool
 
-Para resolver o problema anterior, introduzimos um `ExecutorService` criado uma única vez no construtor e reutilizado em todas as chamadas. Assim o custo de criar e destruir threads é pago apenas uma vez.
+Para resolver o problema anterior, introduzi um `ExecutorService` criado uma única vez no construtor e reutilizado em todas as chamadas. Assim o custo de criar e destruir threads é pago apenas uma vez.
 
 A sincronização passou a ser feita com um `ReentrantLock` em vez de `synchronized`. O `ReentrantLock` é mais flexível, suporta timeout e aquisição interrompível, e garante sempre a libertação do lock através do padrão `try/finally`.
 
@@ -107,11 +114,13 @@ try {
 }
 ```
 
+O tamanho do pool é igual ao número de threads passado como argumento, usando `Executors.newFixedThreadPool(numThreads)`. Com base nos resultados do benchmark, o valor ótimo para este hardware é 8 threads, coincidente com o número de núcleos lógicos do Ryzen 5 4600H. Aumentar além desse ponto não traz ganhos porque o bottleneck passa a ser o acesso à memória e não a disponibilidade de CPU.
+
 ### 3.4. Solução com Fork/Join
 
 O Fork/Join divide o trabalho recursivamente. Enquanto a faixa de colunas for maior que 100, divide-se em duas metades e processa-as em paralelo. Quando chega a uma faixa pequena o suficiente, calcula diretamente.
 
-Para a sincronização usámos um array de `AtomicInteger`. Quando chega a uma faixa pequena o suficiente para processar diretamente, acumula localmente e no final faz o merge com addAndGet(), uma operação atómica que não precisa de locks explícitos e só contende quando duas tarefas tentam atualizar o mesmo bucket ao mesmo tempo.
+Para a sincronização usei um array de `AtomicInteger`. Quando chega a uma faixa pequena o suficiente para processar diretamente, acumula localmente e no final faz o merge com addAndGet(), uma operação atómica que não precisa de locks explícitos e só contende quando duas tarefas tentam atualizar o mesmo bucket ao mesmo tempo.
 
 ```java
 int mid = startX + (endX - startX) / 2;
@@ -134,20 +143,22 @@ O CompletableFuture organiza as três fases como um pipeline assíncrono encadea
 
 ```java
 CompletableFuture
-    .supplyAsync(() -> computeHistogramParallel(tmp, width, height), pool)
-    .thenApply(hist -> computeCumulativeHistogram(hist))
-    .thenApply(cum  -> transformPixelsParallel(tmp, width, height, cum, totalPixels))
-    .thenAccept(result -> { })
-    .join();
+        .supplyAsync(() -> computeHistogramParallel(tmp, width, height), pool)
+        .thenApply(hist -> computeCumulativeHistogram(hist))
+        .thenApply(cum  -> transformPixelsParallel(tmp, width, height, cum, totalPixels))
+        .thenAccept(result -> { })
+        .join();
 ```
 
-Usámos `AtomicInteger[]` para a sincronização do histograma da mesma forma que no Fork/Join, o que permite uma comparação justa entre as duas abordagens.
+O `.join()` no final bloqueia a thread principal até todo o pipeline estar concluído, garantindo que o resultado está disponível antes de devolver a imagem. O encadeamento com `thenApply` trata automaticamente da composição dos resultados: o histograma calculado na `supplyAsync` é passado diretamente ao `thenApply` seguinte que calcula o cumulativo, que por sua vez é passado à transformação de píxeis. Não há gestão manual de dependências entre fases.
+
+Usei `AtomicInteger[]` para a sincronização do histograma da mesma forma que no Fork/Join, o que permite uma comparação justa entre as duas abordagens.
 
 ### 3.6. Configuração do Garbage Collector
 
 Em cada chamada a `processImage()`, o programa cria uma cópia completa da imagem e vários arrays temporários por thread. Para a imagem média, isso representa cerca de 4,4 milhões de objetos `Color` que ficam inutilizáveis assim que o método termina, colocando bastante pressão no garbage collector.
 
-Testámos três coletores:
+Testei três coletores:
 
 | Coletor | Flag JVM | Foco |
 |---------|----------|------|
@@ -187,7 +198,7 @@ O **ZGC** é o mais diferente de todos. O log não mostra nenhum valor de pausa 
 [ZGC] GC(24) Garbage Collection (System.gc()) 5678M(69%)->1360M(17%)
 ```
 
-Para uma aplicação como esta, onde o objetivo é processar a imagem do início ao fim o mais depressa possível e sem requisitos de tempo de resposta, o Parallel GC é a escolha mais adequada. O G1GC é uma boa alternativa geral com pausas mais previsíveis. O ZGC faz sentido em aplicações onde parar a execução por milissegundos é inaceitável, mas como vimos nos testes, requer significativamente mais memória disponível.
+Para uma aplicação como esta, onde o objetivo é processar a imagem do início ao fim o mais depressa possível e sem requisitos de tempo de resposta, o Parallel GC é a escolha mais adequada. O G1GC é uma boa alternativa geral com pausas mais previsíveis. O ZGC faz sentido em aplicações onde parar a execução por milissegundos é inaceitável, mas como se viu nos testes, requer significativamente mais memória disponível.
 
 ```bash
 java -XX:+UseG1GC       -Xms512m -Xmx4g -Xlog:gc:file=gc_g1.log:time,uptime,level,tags ApplyFilters
@@ -199,7 +210,7 @@ java -XX:+UseZGC        -Xms512m -Xmx8g -Xlog:gc:file=gc_zgc.log:time,uptime,lev
 
 ## 4. Concorrência e Sincronização
 
-Em todas as implementações paralelas tomámos a mesma decisão de base: cada thread acumula as suas contagens localmente e só sincroniza no merge final. Isto reduz o número de aquisições de lock de milhões (uma por píxel) para N (uma por thread), tornando a sincronização eficiente sem abdicar dela.
+Em todas as implementações paralelas tomei a mesma decisão de base: cada thread acumula as suas contagens localmente e só sincroniza no merge final. Isto reduz o número de aquisições de lock de milhões (uma por píxel) para N (uma por thread), tornando a sincronização eficiente sem abdicar dela.
 
 A partir daí, cada implementação usa um mecanismo diferente para esse merge. O `synchronized` nas threads manuais é simples e direto, bloqueia o array inteiro mas apenas uma vez por thread. O `ReentrantLock` no thread pool oferece mais flexibilidade com a garantia de libertação via `try/finally`. O `AtomicInteger[]` no Fork/Join e CompletableFuture permite operações atómicas por bucket sem bloqueio total do array.
 
@@ -271,7 +282,7 @@ O gráfico de CPU mostra um uso médio de 48,4%, com oscilações entre 30% e 70
 
 O gráfico de heap mostra um padrão típico de dente de serra: o heap cresce durante o processamento de cada implementação e desce abruptamente quando o GC faz uma coleta entre runs. O heap size estabilizou nos 4 GB configurados e o used heap oscilou entre 1,5 GB e 2,5 GB, o que mostra que o programa usa intensivamente a memória disponível mas sem a esgotar.
 
-### O que os resultados nos dizem
+### O que os resultados dizem
 
 #### 5.1. O impacto do tamanho da imagem
 
@@ -303,9 +314,9 @@ A partir das 6 threads o processador começa a usar as threads lógicas via SMT.
 
 #### 5.4. O limite da Lei de Amdahl
 
-Teoricamente, com 8 threads o ideal era ver o programa a correr 8 vezes mais rápido, mas na prática batemos numa parede à volta dos 3,00× de speedup.
+Teoricamente, com 8 threads o ideal era ver o programa a correr 8 vezes mais rápido, mas na prática cheguei a uma parede à volta dos 3,00× de speedup.
 
-Isto é a Lei de Amdahl na prática. Por mais threads que tenhamos, o speedup máximo é sempre limitado pelas partes do código que são obrigatoriamente sequenciais. Neste caso, a cópia inicial da imagem e a construção do histograma cumulativo (Fase 2) formam um gargalo que impede o programa de escalar de forma linear. Mesmo que tentássemos paralelizar a Fase 2, o resultado seria pior do que a versão sequencial, pois o histograma cumulativo opera sobre apenas 256 valores e o overhead de lançar e coordenar threads para somar 256 inteiros seria muito maior do que o tempo de os somar sequencialmente. Há situações em que paralelizar simplesmente não compensa, e esta é uma delas.
+Isto é a Lei de Amdahl na prática. Por mais threads que se use, o speedup máximo é sempre limitado pelas partes do código que são obrigatoriamente sequenciais. Neste caso, a cópia inicial da imagem e a construção do histograma cumulativo (Fase 2) formam um gargalo que impede o programa de escalar de forma linear. Mesmo que se tentasse paralelizar a Fase 2, o resultado seria pior do que a versão sequencial, pois o histograma cumulativo opera sobre apenas 256 valores e o overhead de lançar e coordenar threads para somar 256 inteiros seria muito maior do que o tempo de os somar sequencialmente. Há situações em que paralelizar simplesmente não compensa, e esta é uma delas.
 
 #### 5.5. Análise de Overhead
 
